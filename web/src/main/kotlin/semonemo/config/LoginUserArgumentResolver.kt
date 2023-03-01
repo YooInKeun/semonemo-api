@@ -1,5 +1,7 @@
 package semonemo.config
 
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.core.MethodParameter
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -20,6 +22,7 @@ import semonemo.model.entity.User
 @Component
 class LoginUserArgumentResolver : HandlerMethodArgumentResolver {
 
+    private val logger: Logger = LoggerFactory.getLogger(LoginUserArgumentResolver::class.java)
     private val session: WebSession? = null
 
     override fun supportsParameter(parameter: MethodParameter): Boolean =
