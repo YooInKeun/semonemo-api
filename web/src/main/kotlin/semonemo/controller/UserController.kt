@@ -8,11 +8,11 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.WebSession
 import reactor.core.publisher.Mono
+import semonemo.config.LoginUser
 import semonemo.config.LoginUserArgumentResolver.Companion.LOGIN_ATTRIBUTE_NAME
-import semonemo.config.LoginUserArgumentResolver.Companion.findLoginUser
-import semonemo.config.LoginUserArgumentResolver.Companion.unauthorizedResponse
 import semonemo.model.user.AuthRequest
 import semonemo.model.SemonemoResponse
+import semonemo.model.entity.User
 import semonemo.model.user.UserGetResponse
 import semonemo.service.UserService
 
@@ -38,9 +38,6 @@ class UserController(
             .flatMap { Mono.just(ResponseEntity.ok("SUCCESS")) }
 
     @GetMapping("/api/my-info")
-    fun getMyInfo(session: WebSession): Mono<ResponseEntity<SemonemoResponse>> {
-        val user = findLoginUser(session) ?: return unauthorizedResponse()
-
-        return Mono.just(ResponseEntity.ok(SemonemoResponse(data = UserGetResponse.of(user))))
-    }
+    fun getMyInfo(@LoginUser user: User): Mono<ResponseEntity<SemonemoResponse>> =
+        Mono.just(ResponseEntity.ok(SemonemoResponse(data = UserGetResponse.of(user))))
 }
