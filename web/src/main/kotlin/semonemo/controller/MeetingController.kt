@@ -10,15 +10,14 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
-import org.springframework.web.server.WebSession
 import reactor.core.publisher.Mono
-import semonemo.config.LoginUserArgumentResolver.Companion.findLoginUser
-import semonemo.config.LoginUserArgumentResolver.Companion.unauthorizedResponse
+import semonemo.config.LoginUser
 import semonemo.model.invitation.AttendanceUpdateRequest
 import semonemo.model.meeting.MeetingGetResponse
 import semonemo.model.meeting.MeetingSaveRequest
 import semonemo.model.meeting.MeetingResponse
 import semonemo.model.SemonemoResponse
+import semonemo.model.entity.User
 import semonemo.model.invitation.WantToAttendRequest
 import semonemo.model.exception.ForbiddenException
 import semonemo.service.MeetingService
@@ -30,68 +29,46 @@ class MeetingController(
 ) {
 
     @PostMapping("/api/meetings", consumes = [MediaType.APPLICATION_JSON_VALUE])
-    fun createMeeting(
-        @RequestBody request: MeetingSaveRequest,
-        session: WebSession
-    ): Mono<ResponseEntity<SemonemoResponse>> {
-        val user = findLoginUser(session) ?: return unauthorizedResponse()
-
+    fun createMeeting(@RequestBody request: MeetingSaveRequest, @LoginUser user: User): Mono<ResponseEntity<SemonemoResponse>> {
         return meetingService.saveMeeting(user, request)
             .flatMap { Mono.just(ResponseEntity.ok(SemonemoResponse(data = MeetingResponse.of(it)))) }
             .onErrorResume { generateErrorResponse(it) }
     }
 
     @GetMapping("/api/meetings")
-    fun getMeetings(session: WebSession): Mono<ResponseEntity<SemonemoResponse>> {
-        val user = findLoginUser(session) ?: return unauthorizedResponse()
+    fun getMeetings(@LoginUser user: User): Mono<ResponseEntity<SemonemoResponse>> {
         val now = LocalDateTime.now()
 
-        return meetingService.findMeetings(now, user)
+        return meetingService.findMeetings(LocalDateTime.now(), user)
             .collectList()
             .flatMap { Mono.just(ResponseEntity.ok(SemonemoResponse(data = MeetingGetResponse.listOf(meetings = it, user = user, now = now)))) }
     }
 
     @GetMapping("/api/meetings/{id}")
-    fun getMeetings(session: WebSession, @PathVariable id: Long): Mono<ResponseEntity<SemonemoResponse>> {
-        val user = findLoginUser(session) ?: return unauthorizedResponse()
-
+    fun getMeetings(@PathVariable id: Long, @LoginUser user: User): Mono<ResponseEntity<SemonemoResponse>> {
         return meetingService.findMeeting(id, user)
             .flatMap { Mono.just(ResponseEntity.ok(SemonemoResponse(data = MeetingGetResponse.of(it, user)))) }
             .onErrorResume { generateErrorResponse(it) }
     }
 
-    @DeleteMapping("/api/meetings/{id}")
-    fun removeMeeting(session: WebSession, @PathVariable id: Long): Mono<ResponseEntity<SemonemoResponse>> {
-        val user = findLoginUser(session) ?: return unauthorizedResponse()
-
-        return meetingService.removeMeeting(user, id)
-            .flatMap { Mono.just(ResponseEntity.ok(SemonemoResponse(data = MeetingResponse.of(it)))) }
-            .onErrorResume { generateErrorResponse(it) }
-    }
-
     @PutMapping("/api/meetings/{id}/attendance")
-    fun updateWantToAttend(
-        session: WebSession,
-        @PathVariable id: Long,
-        @RequestBody request: WantToAttendRequest
-    ): Mono<ResponseEntity<SemonemoResponse>> {
-        val user = findLoginUser(session) ?: return unauthorizedResponse()
-
+    fun updateWantToAttend(@PathVariable id: Long, @RequestBody request: WantToAttendRequest, @LoginUser user: User): Mono<ResponseEntity<SemonemoResponse>> {
         return meetingService.updateWantToAttend(id, user, request)
             .flatMap { Mono.just(ResponseEntity.ok(SemonemoResponse(data = MeetingResponse.of(it)))) }
             .onErrorResume { generateErrorResponse(it) }
     }
 
     @PutMapping("/api/meetings/{meetingId}/users/{userId}/attendance")
-    fun updateAttendance(
-        session: WebSession,
-        @PathVariable meetingId: Long,
-        @PathVariable userId: Long,
-        @RequestBody request: AttendanceUpdateRequest
-    ): Mono<ResponseEntity<SemonemoResponse>> {
-        val loginUser = findLoginUser(session) ?: return unauthorizedResponse()
+    fun updateAttendance(@PathVariable meetingId: Long, @PathVariable userId: Long,
+                         @RequestBody request: AttendanceUpdateRequest, @LoginUser user: User): Mono<ResponseEntity<SemonemoResponse>> {
+        return meetingService.updateAttendance(user, meetingId, userId, request)
+            .flatMap { Mono.just(ResponseEntity.ok(SemonemoResponse(data = MeetingResponse.of(it)))) }
+            .onErrorResume { generateErrorResponse(it) }
+    }
 
-        return meetingService.updateAttendance(loginUser, meetingId, userId, request)
+    @DeleteMapping("/api/meetings/{id}")
+    fun removeMeeting(@LoginUser user: User, @PathVariable id: Long): Mono<ResponseEntity<SemonemoResponse>> {
+        return meetingService.removeMeeting(user, id)
             .flatMap { Mono.just(ResponseEntity.ok(SemonemoResponse(data = MeetingResponse.of(it)))) }
             .onErrorResume { generateErrorResponse(it) }
     }
