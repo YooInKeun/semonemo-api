@@ -1,5 +1,7 @@
 package semonemo.service
 
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import reactor.core.publisher.Flux
@@ -18,6 +20,8 @@ class StampService(
     private val invitationRepository: InvitationRepository,
 ) {
 
+    private val logger: Logger = LoggerFactory.getLogger(StampService::class.java)
+
     @Transactional
     fun createStamp(): Flux<Stamp> {
         return invitationRepository.findByAttendedAndStamped(attended = true, stamped = false)
@@ -35,7 +39,7 @@ class StampService(
                             stampRepository.save(Stamp(stampCounter.seq, invitation)),
                         )
                     }.flatMap { tuple ->
-                        println("[스탬프] 미팅 id: ${tuple.t2.meeting.id}, 유저 닉네임: ${tuple.t2.user.nickname}, 생성 시간: ${LocalDateTime.now()}")
+                        logger.info("[스탬프] 미팅 id: ${tuple.t2.meeting.id}, 유저 닉네임: ${tuple.t2.user.nickname}, 생성 시간: ${LocalDateTime.now()}")
                         Mono.just(tuple.t3)
                     }
             }
