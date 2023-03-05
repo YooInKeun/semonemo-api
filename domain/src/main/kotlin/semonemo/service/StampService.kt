@@ -56,11 +56,9 @@ class StampService(
     @Transactional
     fun updateNewStamps(user: User): Flux<Stamp> =
         stampRepository.findByUserIdAndConfirmed(userId = user.id!!, confirmed = false)
-            .flatMap { stamp ->
-                stamp.confirmed = true
-                stampRepository.save(stamp)
-                    .flatMap { Mono.just(it) }
-            }.sort(Comparator.comparingLong { it.id })
+            .doOnNext { stamp -> stamp.confirmed = true }
+            .flatMap { stampRepository.save(it) }
+            .sort(Comparator.comparingLong { it.id })
 
     @Transactional(readOnly = true)
     fun findNewStamps(user: User): Flux<Stamp> =
